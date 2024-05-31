@@ -8,3 +8,4 @@ mod kwar13_tests;
 mod main_tests;
 mod krayt78_2_tests;
 mod sinzii_2_tests;
+mod tarekkma_tests;
