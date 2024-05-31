@@ -711,12 +711,11 @@ fn extra_total_assets_of_empty() {
     assert_eq!(total_assets, Ok(0));
 }
 
-// MODIFIED: changed to from ForeignAddress to NoOwnedAddresses
 #[test]
 fn extra_total_assets_of_foreign_address() {
     let wallet = Wallet::new(vec![].into_iter());
     let total_assets = wallet.total_assets_of(Address::Alice);
-    assert_eq!(total_assets, Err(WalletError::NoOwnedAddresses));
+    assert_eq!(total_assets, Err(WalletError::ForeignAddress));
 }
 
 #[test]
