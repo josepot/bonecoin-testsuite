@@ -2,16 +2,34 @@ use bonecoin_core::*;
 use std::collections::*;
 use utxo_wallet_assignment::Wallet;
 
-// #[test]
-// fn total_assets_of_should_not_return_no_owned_address() {
-//     // https://discord.com/channels/1219966585582653471/1246066143907811368/1246112529189568555
-//     let wallet = Wallet::new(vec![].into_iter());
+#[test]
+fn total_assets_of_should_not_return_no_owned_address() {
+    // https://discord.com/channels/1219966585582653471/1246066143907811368/1246112529189568555
+    let wallet = Wallet::new(vec![].into_iter());
 
-//     assert_eq!(
-//         wallet.total_assets_of(Address::Bob),
-//         Err(WalletError::ForeignAddress)
-//     );
-// }
+    assert_eq!(
+        wallet.total_assets_of(Address::Bob),
+        Err(WalletError::ForeignAddress)
+    );
+
+    assert_eq!(
+        wallet.all_coins_of(Address::Bob),
+        Err(WalletError::ForeignAddress)
+    );
+
+    // just get a coin id
+    let dummy_tx = Transaction {
+        inputs: vec![],
+        outputs: vec![Coin {
+            value: 100,
+            owner: Address::Alice,
+        }],
+    };
+    let dummy_coin = dummy_tx.coin_id(1, 0);
+
+
+    assert_eq!(wallet.coin_details(&dummy_coin), Err(WalletError::UnknownCoin));
+}
 
 #[test]
 fn spend_utxo_in_same_block() {
@@ -125,18 +143,18 @@ fn sync_100_blocks() {
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(200));
     assert_eq!(wallet.net_worth(), 500);
 
-
     // reorg to genesis
     node.set_best(block75);
     wallet.sync(&node);
 
-
     println!("Queries: {}", node.how_many_queries());
-    assert!(node.how_many_queries() < (70 + 100) /* we already called 100 times at least to sync to block 100 */);
+    assert!(
+        node.how_many_queries() < (70 + 100) /* we already called 100 times at least to sync to block 100 */
+    );
 
     assert_eq!(wallet.best_height(), 75);
     assert_eq!(wallet.best_hash(), block75);
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(225));
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(150));
-    assert_eq!(wallet.net_worth(), 375);    
+    assert_eq!(wallet.net_worth(), 375);
 }
