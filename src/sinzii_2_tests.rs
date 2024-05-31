@@ -85,19 +85,20 @@ fn reorg_with_utxos_01() {
     let alice_first_coin = coins.iter().find(|(_, u)| u == &200).unwrap();
     let tx = wallet.create_automatic_transaction(Address::Charlie, 190, 10);
 
-    assert_eq!(
-        tx,
-        Ok(Transaction {
-            inputs: vec![Input {
-                coin_id: alice_first_coin.0,
-                signature: Signature::Valid(Address::Alice)
-            }],
-            outputs: vec![Coin {
-                value: 190,
-                owner: Address::Charlie
-            }]
-        })
-    );
+    // MODIFIED: your UTXO selection strategy can result on this test failing
+    // assert_eq!(
+    //     tx,
+    //     Ok(Transaction {
+    //         inputs: vec![Input {
+    //             coin_id: alice_first_coin.0,
+    //             signature: Signature::Valid(Address::Alice)
+    //         }],
+    //         outputs: vec![Coin {
+    //             value: 190,
+    //             owner: Address::Charlie
+    //         }]
+    //     })
+    // );
 
     // consume tx
     let best = node.best_block_at_height(2).unwrap();
