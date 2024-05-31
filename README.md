@@ -1,7 +1,7 @@
 # Bonecoin Test Suite
 
 ## How to use it
-1. Change path of `bonecoin-core` and `utxo-wallet-assignment`
+1. Change path of `bonecoin-core` and `utxo-wallet-assignment` in your Cargo.toml
 2. Run `cargo t`
 3. Enjoy
 
