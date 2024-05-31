@@ -711,7 +711,6 @@ fn extra_total_assets_of_empty() {
     assert_eq!(total_assets, Ok(0));
 }
 
-
 // MODIFIED: changed to from ForeignAddress to NoOwnedAddresses
 #[test]
 fn extra_total_assets_of_foreign_address() {
@@ -1039,8 +1038,10 @@ fn extra_automatic_transaction_simple() {
     // non-deterministic ordering over multiple tests.
     let assets_alice = wallet.total_assets_of(Address::Alice);
     let assets_bob = wallet.total_assets_of(Address::Bob);
-    assert!(assets_alice == Ok(0) || assets_alice == Ok(2));
-    assert!(assets_bob == Ok(80) || assets_bob == Ok(82));
+    assert!(
+        (assets_bob == Ok(80) && assets_alice == Ok(2))
+            || (assets_bob == Ok(82) && assets_alice == Ok(0))
+    );
 }
 
 #[test]
