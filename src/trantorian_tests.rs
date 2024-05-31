@@ -948,6 +948,520 @@ fn extra_total_net_worth_empty() {
     assert_eq!(wallet.net_worth(), 0);
 }
 
+#[test]
+fn extra_all_coins_of_simple() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+    let mut all_coins_alice = HashSet::new();
+
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let coin_2 = Coin {
+        value: 90,
+        owner: Address::Bob,
+    };
+    let coin_3 = Coin {
+        value: 58,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone(), coin_2, coin_3.clone()],
+    };
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+    all_coins_alice.insert((tx_1.coin_id(1, 0), coin_1.value));
+    all_coins_alice.insert((tx_1.coin_id(1, 2), coin_3.value));
+
+    let coin_4 = Coin {
+        value: 53,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 26,
+        owner: Address::Alice,
+    };
+    let tx_2a = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4],
+    };
+    let tx_2b = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_5.clone()],
+    };
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2a, tx_2b.clone()]);
+    all_coins_alice.insert((tx_2b.coin_id(2, 0), coin_5.value));
+
+    let coin_6 = Coin {
+        value: 42,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 75,
+        owner: Address::Bob,
+    };
+    let coin_8 = Coin {
+        value: 8,
+        owner: Address::Bob,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7, coin_8],
+    };
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    all_coins_alice.insert((tx_3.coin_id(3, 0), coin_6.value));
+    wallet.sync(&node);
+
+    // We just aggregate all coins in a sorted vector for better debug output if this fails.
+    let mut actual = wallet
+        .all_coins_of(Address::Alice)
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+    actual.sort_by(|(_, a), (_, b)| a.cmp(b));
+    let mut expected = all_coins_alice.into_iter().collect::<Vec<_>>();
+    expected.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    assert_eq!(wallet.best_height(), 3);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn extra_all_coins_of_fork() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+    let mut all_coins_alice = HashSet::new();
+    let mut all_coins_alice_fork = HashSet::new();
+
+    // Chain 1
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let coin_2 = Coin {
+        value: 90,
+        owner: Address::Bob,
+    };
+    let coin_3 = Coin {
+        value: 58,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone(), coin_2, coin_3.clone()],
+    };
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+    all_coins_alice.insert((tx_1.coin_id(1, 0), coin_1.value));
+    all_coins_alice.insert((tx_1.coin_id(1, 2), coin_3.value));
+    all_coins_alice_fork.insert((tx_1.coin_id(1, 0), coin_1.value));
+    all_coins_alice_fork.insert((tx_1.coin_id(1, 2), coin_3.value));
+
+    let coin_4 = Coin {
+        value: 53,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 26,
+        owner: Address::Alice,
+    };
+    let tx_2a = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4],
+    };
+    let tx_2b = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_5.clone()],
+    };
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2a, tx_2b.clone()]);
+    all_coins_alice.insert((tx_2b.coin_id(2, 0), coin_5.value));
+
+    let coin_6 = Coin {
+        value: 42,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 75,
+        owner: Address::Bob,
+    };
+    let coin_8 = Coin {
+        value: 8,
+        owner: Address::Bob,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7, coin_8],
+    };
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    all_coins_alice.insert((tx_3.coin_id(3, 0), coin_6.value));
+    wallet.sync(&node);
+
+    let mut actual = wallet
+        .all_coins_of(Address::Alice)
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+    actual.sort_by(|(_, a), (_, b)| a.cmp(b));
+    let mut expected = all_coins_alice.into_iter().collect::<Vec<_>>();
+    expected.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    assert_eq!(wallet.best_height(), 3);
+    assert_eq!(actual, expected);
+
+    // Chain 2
+    let coin_4 = Coin {
+        value: 26,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 53,
+        owner: Address::Alice,
+    };
+    let tx_2 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4, coin_5.clone()],
+    };
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2.clone()]);
+    all_coins_alice_fork.insert((tx_2.coin_id(2, 1), coin_5.value));
+
+    let coin_6 = Coin {
+        value: 1,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 2,
+        owner: Address::Alice,
+    };
+    let coin_8 = Coin {
+        value: 3,
+        owner: Address::Alice,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7.clone(), coin_8.clone()],
+    };
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    all_coins_alice_fork.insert((tx_3.coin_id(3, 0), coin_6.value));
+    all_coins_alice_fork.insert((tx_3.coin_id(3, 1), coin_7.value));
+    all_coins_alice_fork.insert((tx_3.coin_id(3, 2), coin_8.value));
+    wallet.sync(&node);
+
+    let mut actual = wallet
+        .all_coins_of(Address::Alice)
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+    actual.sort_by(|(_, a), (_, b)| a.cmp(b));
+    let mut expected = all_coins_alice_fork.into_iter().collect::<Vec<_>>();
+    expected.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    assert_eq!(wallet.best_height(), 3);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn extra_all_coins_spend() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+    let mut all_coins_alice = HashSet::new();
+
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone()],
+    };
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+
+    let coin_2 = Coin {
+        value: 7,
+        owner: Address::Alice,
+    };
+    let tx_2 = Transaction {
+        inputs: vec![Input {
+            coin_id: tx_1.coin_id(1, 0),
+            signature: Signature::Valid(Address::Alice),
+        }],
+        outputs: vec![coin_2.clone()],
+    };
+
+    node.add_block_as_best(block_1, vec![tx_2.clone()]);
+    all_coins_alice.insert((tx_2.coin_id(2, 0), coin_2.value));
+    wallet.sync(&node);
+
+    let mut actual = wallet
+        .all_coins_of(Address::Alice)
+        .unwrap()
+        .into_iter()
+        .collect::<Vec<_>>();
+    actual.sort_by(|(_, a), (_, b)| a.cmp(b));
+    let mut expected = all_coins_alice.into_iter().collect::<Vec<_>>();
+    expected.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+    assert_eq!(wallet.best_height(), 2);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn extra_all_coin_foreign_address() {
+    let wallet = Wallet::new(vec![].into_iter());
+    assert_eq!(
+        wallet.all_coins_of(Address::Alice),
+        Err(WalletError::ForeignAddress)
+    );
+}
+
+#[test]
+fn extra_coin_details_simple() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let coin_2 = Coin {
+        value: 90,
+        owner: Address::Bob,
+    };
+    let coin_3 = Coin {
+        value: 58,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone(), coin_2, coin_3.clone()],
+    };
+    let coin_id_1 = tx_1.coin_id(1, 0);
+    let coin_id_3 = tx_1.coin_id(1, 2);
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_1), Ok(coin_1));
+    assert_eq!(wallet.coin_details(&coin_id_3), Ok(coin_3));
+
+    let coin_4 = Coin {
+        value: 53,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 26,
+        owner: Address::Alice,
+    };
+    let tx_2a = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4],
+    };
+    let tx_2b = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_5.clone()],
+    };
+    let coin_id_5 = tx_2b.coin_id(2, 0);
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2a, tx_2b.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_5), Ok(coin_5));
+
+    let coin_6 = Coin {
+        value: 42,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 75,
+        owner: Address::Bob,
+    };
+    let coin_8 = Coin {
+        value: 8,
+        owner: Address::Bob,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7, coin_8],
+    };
+    let coin_id_6 = tx_3.coin_id(3, 0);
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_6), Ok(coin_6));
+}
+
+#[test]
+fn extra_coin_details_fork() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+
+    // Chain 1
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let coin_2 = Coin {
+        value: 90,
+        owner: Address::Bob,
+    };
+    let coin_3 = Coin {
+        value: 58,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone(), coin_2, coin_3.clone()],
+    };
+    let coin_id_1 = tx_1.coin_id(1, 0);
+    let coin_id_3 = tx_1.coin_id(1, 2);
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_1), Ok(coin_1));
+    assert_eq!(wallet.coin_details(&coin_id_3), Ok(coin_3));
+
+    let coin_4 = Coin {
+        value: 53,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 26,
+        owner: Address::Alice,
+    };
+    let tx_2a = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4],
+    };
+    let tx_2b = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_5.clone()],
+    };
+    let coin_id_5 = tx_2b.coin_id(2, 0);
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2a, tx_2b.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_5), Ok(coin_5));
+
+    let coin_6 = Coin {
+        value: 42,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 75,
+        owner: Address::Bob,
+    };
+    let coin_8 = Coin {
+        value: 8,
+        owner: Address::Bob,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7, coin_8],
+    };
+    let coin_id_6 = tx_3.coin_id(3, 0);
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(wallet.coin_details(&coin_id_6), Ok(coin_6));
+
+    // Chain 2
+    let coin_4 = Coin {
+        value: 26,
+        owner: Address::Bob,
+    };
+    let coin_5 = Coin {
+        value: 53,
+        owner: Address::Alice,
+    };
+    let tx_2 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_4, coin_5.clone()],
+    };
+    let coin_id_5 = tx_2.coin_id(2, 1);
+
+    let block_2 = node.add_block_as_best(block_1, vec![tx_2.clone()]);
+    wallet.sync(&node);
+    assert_eq!(wallet.coin_details(&coin_id_5), Ok(coin_5));
+
+    let coin_6 = Coin {
+        value: 1,
+        owner: Address::Alice,
+    };
+    let coin_7 = Coin {
+        value: 2,
+        owner: Address::Alice,
+    };
+    let coin_8 = Coin {
+        value: 3,
+        owner: Address::Alice,
+    };
+    let tx_3 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_6.clone(), coin_7.clone(), coin_8.clone()],
+    };
+    let coin_id_6 = tx_3.coin_id(3, 0);
+    let coin_id_7 = tx_3.coin_id(3, 1);
+    let coin_id_8 = tx_3.coin_id(3, 2);
+
+    node.add_block_as_best(block_2, vec![tx_3.clone()]);
+    wallet.sync(&node);
+    assert_eq!(wallet.coin_details(&coin_id_6), Ok(coin_6));
+    assert_eq!(wallet.coin_details(&coin_id_7), Ok(coin_7));
+    assert_eq!(wallet.coin_details(&coin_id_8), Ok(coin_8));
+}
+
+#[test]
+fn extra_coin_details_spend() {
+    let mut wallet = Wallet::new(vec![Address::Alice].into_iter());
+    let mut node = MockNode::new();
+
+    let coin_1 = Coin {
+        value: 12,
+        owner: Address::Alice,
+    };
+    let tx_1 = Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![coin_1.clone()],
+    };
+    let coin_id_1 = tx_1.coin_id(0, 0);
+
+    let block_1 = node.add_block_as_best(Block::genesis().id(), vec![tx_1.clone()]);
+
+    let coin_2 = Coin {
+        value: 7,
+        owner: Address::Alice,
+    };
+    let tx_2 = Transaction {
+        inputs: vec![Input {
+            coin_id: tx_1.coin_id(1, 0),
+            signature: Signature::Valid(Address::Alice),
+        }],
+        outputs: vec![coin_2.clone()],
+    };
+    let coin_id_2 = tx_2.coin_id(2, 0);
+
+    node.add_block_as_best(block_1, vec![tx_2.clone()]);
+    wallet.sync(&node);
+
+    assert_eq!(
+        wallet.coin_details(&coin_id_1),
+        Err(WalletError::UnknownCoin)
+    );
+    assert_eq!(wallet.coin_details(&coin_id_2), Ok(coin_2));
+}
+
 // Create manual transaction
 #[test]
 fn extra_create_manual_transaction() {
@@ -1120,7 +1634,7 @@ fn extra_automatic_transaction_zero_coin_value() {
 
     // We are asking for an auto transaction of value 0. This is not alowed as this would be a
     // possible attack vector to flood the network with transactions.
-    let tx_auto = wallet.create_automatic_transaction(Address::Bob, 0, 3);
+    let tx_auto = wallet.create_automatic_transaction(Address::Bob, 0, 0);
     assert_eq!(tx_auto, Err(WalletError::ZeroCoinValue));
 }
 
