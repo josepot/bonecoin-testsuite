@@ -1,15 +1,16 @@
 # Bonecoin Test Suite
 
-## How to use it
-1. Change path of `bonecoin-core` and `utxo-wallet-assignment` in your Cargo.toml
-2. Run `cargo t`
-3. Enjoy
+## How to Use It
+
+1. Change the path of `bonecoin-core` and `utxo-wallet-assignment` in your `Cargo.toml`.
+2. Run `cargo t`.
+3. Enjoy!
 
 ## Credits
-I haven't wrote any of these tests I've just complied them into one place.
 
+I haven't written all of these tests; I've just compiled them into one place alongside a few of mine.
 
-Discord usernames:
+**Discord Usernames:**
 - bigtava
 - esteblock
 - krayt78
@@ -18,7 +19,6 @@ Discord usernames:
 - tommy97
 - trantorian
 
-
 ## Contribution
 
-PRs are always welcome :heart:
+PRs are always welcome ❤️
