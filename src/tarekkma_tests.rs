@@ -27,8 +27,10 @@ fn total_assets_of_should_not_return_no_owned_address() {
     };
     let dummy_coin = dummy_tx.coin_id(1, 0);
 
-
-    assert_eq!(wallet.coin_details(&dummy_coin), Err(WalletError::UnknownCoin));
+    assert_eq!(
+        wallet.coin_details(&dummy_coin),
+        Err(WalletError::UnknownCoin)
+    );
 }
 
 #[test]
