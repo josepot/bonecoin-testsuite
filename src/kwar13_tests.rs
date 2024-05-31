@@ -1,14 +1,13 @@
 //! Tests for the bonecoin wallet
 
-use std::collections::*;
 use bonecoin_core::*;
+use std::collections::*;
 use utxo_wallet_assignment::Wallet;
 
 /// Simple helper to initialize a wallet with just one account.
 fn wallet_with_alice() -> Wallet {
     Wallet::new(vec![Address::Alice].into_iter())
 }
-
 
 /// Helper to create a simple and somewhat collision unlikely transaction to mark forks.
 /// When your tests create forked blockchain, you have to be sure that you are not accidentally
@@ -234,7 +233,11 @@ fn make_one_block_blockchain() -> (MockNode, Wallet) {
 
     let tx_mint = Transaction {
         inputs: vec![],
-        outputs: vec![coin_alice_1.clone(), coin_alice_2.clone(), coin_bob_1.clone()],
+        outputs: vec![
+            coin_alice_1.clone(),
+            coin_alice_2.clone(),
+            coin_bob_1.clone(),
+        ],
     };
 
     let mut node = MockNode::new();
@@ -269,15 +272,23 @@ fn transaction_with_zero_value_fails() {
     let (_, wallet) = make_one_block_blockchain();
 
     // now test with manual
-    let (coin_id, _) = wallet.all_coins_of(Address::Alice).unwrap().into_iter().next().unwrap();
+    let (coin_id, _) = wallet
+        .all_coins_of(Address::Alice)
+        .unwrap()
+        .into_iter()
+        .next()
+        .unwrap();
     let result = wallet.create_manual_transaction(
         vec![coin_id],
-        vec![Coin { value: 0, owner: Address::Eve }],
+        vec![Coin {
+            value: 0,
+            owner: Address::Eve,
+        }],
     );
     assert_eq!(result, Err(WalletError::ZeroCoinValue));
 
     // now check a failing transaction to zero value outputs for both automatic and manual transactions
-    let result = wallet.create_automatic_transaction(Address::Charlie, 0, 3);
+    let result = wallet.create_automatic_transaction(Address::Charlie, 0, 0);
     assert_eq!(result, Err(WalletError::ZeroCoinValue));
 }
 
@@ -339,7 +350,10 @@ fn sneak_in_non_owned_address() {
 
     let result = wallet.create_manual_transaction(
         vec![charlie_coin_id],
-        vec![Coin { value: 10, owner: Address::Eve }],
+        vec![Coin {
+            value: 10,
+            owner: Address::Eve,
+        }],
     );
     assert_eq!(result, Err(WalletError::UnknownCoin));
 }
@@ -354,7 +368,6 @@ fn transaction_with_no_change_tx() {
     assert!(result.unwrap().outputs.len() == 1);
 }
 
-
 #[test]
 fn utxo_reog_simple() {
     let mut node = MockNode::new();
@@ -362,7 +375,10 @@ fn utxo_reog_simple() {
 
     let tx_1 = Transaction {
         inputs: vec![Input::dummy()],
-        outputs: vec![Coin { value: 27, owner: Address::Alice }],
+        outputs: vec![Coin {
+            value: 27,
+            owner: Address::Alice,
+        }],
     };
 
     // Old chain
@@ -381,9 +397,11 @@ fn utxo_reog_simple() {
     // now reog to a new chain where alice's 27 token is dropped but bob received 13
     let tx_2 = Transaction {
         inputs: vec![Input::dummy()],
-        outputs: vec![Coin { value: 13, owner: Address::Bob }],
+        outputs: vec![Coin {
+            value: 13,
+            owner: Address::Bob,
+        }],
     };
-
 
     let b3_id = node.add_block_as_best(b2_id, vec![tx_2]);
     let b4_id = node.add_block_as_best(b3_id, vec![]);
@@ -396,7 +414,6 @@ fn utxo_reog_simple() {
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(0));
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(13));
 }
-
 
 // add a test to send in a coin to an address, then reorg that tranaction away
 // get coin details and see if you get error for the coin. you should
@@ -418,5 +435,3 @@ fn utxo_reog_simple() {
 // Create automatic transactions
 // ... with too much output - DONE
 // ... with zero change - DONE
-
-
