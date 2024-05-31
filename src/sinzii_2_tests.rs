@@ -77,28 +77,14 @@ fn initial_setup() -> (impl WalletApi, MockNode) {
     (wallet, node)
 }
 
+// MODIFIED: your UTXO selection strategy can result on this test failing, so I've changed the transaction
 #[test]
 fn reorg_with_utxos_01() {
     let (mut wallet, mut node) = initial_setup();
     let coins = Vec::from_iter(wallet.all_coins_of(Address::Alice).unwrap());
 
-    let alice_first_coin = coins.iter().find(|(_, u)| u == &200).unwrap();
-    let tx = wallet.create_automatic_transaction(Address::Charlie, 190, 10);
-
-    // MODIFIED: your UTXO selection strategy can result on this test failing
-    // assert_eq!(
-    //     tx,
-    //     Ok(Transaction {
-    //         inputs: vec![Input {
-    //             coin_id: alice_first_coin.0,
-    //             signature: Signature::Valid(Address::Alice)
-    //         }],
-    //         outputs: vec![Coin {
-    //             value: 190,
-    //             owner: Address::Charlie
-    //         }]
-    //     })
-    // );
+    let tx: Result<Transaction, WalletError> =
+        wallet.create_automatic_transaction(Address::Dave, 800, 100);
 
     // consume tx
     let best = node.best_block_at_height(2).unwrap();
@@ -106,8 +92,10 @@ fn reorg_with_utxos_01() {
     wallet.sync(&node);
     let last_query_count = node.how_many_queries();
 
-    assert_eq!(wallet.total_assets_of(Address::Charlie).unwrap(), 490);
-    assert_eq!(wallet.total_assets_of(Address::Alice).unwrap(), 100);
+    assert_eq!(wallet.total_assets_of(Address::Charlie).unwrap(), 0);
+    assert_eq!(wallet.total_assets_of(Address::Alice).unwrap(), 0);
+    assert_eq!(wallet.total_assets_of(Address::Bob).unwrap(), 0);
+    assert_eq!(wallet.net_worth(), 0);
 
     node.add_block_as_best(best, vec![]);
     wallet.sync(&node);
@@ -115,6 +103,7 @@ fn reorg_with_utxos_01() {
     assert_eq!(node.how_many_queries() - last_query_count, 3);
     assert_eq!(wallet.total_assets_of(Address::Charlie).unwrap(), 300);
     assert_eq!(wallet.total_assets_of(Address::Alice).unwrap(), 300);
+    assert_eq!(wallet.total_assets_of(Address::Bob).unwrap(), 300);
 }
 
 // Reorg performance tests to make sure they aren't just syncing from genesis each time.
