@@ -6,6 +6,16 @@ fn wallet_with_alice_and_bob() -> Wallet {
     Wallet::new(vec![Address::Alice, Address::Bob].into_iter())
 }
 
+fn marker_tx() -> Transaction {
+    Transaction {
+        inputs: vec![Input::dummy()],
+        outputs: vec![Coin {
+            value: 123,
+            owner: Address::Custom(123),
+        }],
+    }
+}
+
 #[test]
 fn reorg_hard_test_hehe() {
     // Create node and wallet
