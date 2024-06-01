@@ -133,6 +133,13 @@ fn reorg_hard_test_hehe() {
     assert_eq!(Ok(420), wallet.total_assets_of(Address::Bob));
     assert_eq!(520, wallet.net_worth());
 
+
+    // Let's get rid of the last two blocks, to check that the created and destroyed coin at block 3 isn't in our wallet. It was created in the same block!
+
+    node.add_block_as_best(block2, vec![marker_tx()]);
+    wallet.sync(&node);
+    assert!(wallet.coin_details(&alice_coin_created_and_destroyed_at_block_3).is_err());
+
     // Let's reorg the last_two_blocks
     let tx2_1 = Transaction {
         inputs: vec![
