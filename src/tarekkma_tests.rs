@@ -98,9 +98,9 @@ fn spend_utxo_in_same_block() {
     assert_eq!(wallet.net_worth(), 0);
 }
 
-/// test sync performance with 100 blocks
+/// test sync performance with 1000 blocks
 #[test]
-fn sync_100_blocks() {
+fn perf_sync_100_blocks() {
     let mut node = MockNode::new();
     let mut wallet = Wallet::new(vec![Address::Alice, Address::Bob].into_iter());
 
@@ -151,7 +151,7 @@ fn sync_100_blocks() {
 
     println!("Queries: {}", node.how_many_queries());
     assert!(
-        node.how_many_queries() < (70 + 100) /* we already called 100 times at least to sync to block 100 */
+        node.how_many_queries() < (75 + 100) /* we already called 100 times at least to sync to block 100 */
     );
 
     assert_eq!(wallet.best_height(), 75);
@@ -159,4 +159,61 @@ fn sync_100_blocks() {
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(225));
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(150));
     assert_eq!(wallet.net_worth(), 375);
+}
+
+/// test sync performance with 100 blocks
+#[test]
+fn pref_sync_1000_blocks() {
+    let mut node = MockNode::new();
+    let mut wallet = Wallet::new(vec![Address::Alice, Address::Bob].into_iter());
+
+    let mut last_block = Block::genesis().id();
+    let mut block850 = last_block;
+    for i in 1..=1000 {
+        let tx1 = Transaction {
+            inputs: vec![],
+            outputs: vec![Coin {
+                value: 10,
+                owner: Address::Alice,
+            }],
+        };
+        let alice_coin = tx1.coin_id(i, 0);
+        let tx2 = Transaction {
+            inputs: vec![Input {
+                coin_id: alice_coin,
+                signature: Signature::Valid(Address::Alice),
+            }],
+            outputs: vec![
+                Coin {
+                    value: 2,
+                    owner: Address::Bob,
+                },
+                Coin {
+                    value: 3,
+                    owner: Address::Alice,
+                },
+            ],
+        };
+        last_block = node.add_block_as_best(last_block, vec![tx1, tx2]);
+        if i == 850 {
+            block850 = last_block;
+        }
+    }
+
+    wallet.sync(&node);
+
+    assert_eq!(wallet.best_height(), 1000);
+    assert_eq!(wallet.best_hash(), last_block);
+    assert_eq!(wallet.total_assets_of(Address::Alice), Ok(3000));
+    assert_eq!(wallet.total_assets_of(Address::Bob), Ok(2000));
+    assert_eq!(wallet.net_worth(), 5000);
+
+    // reorg to genesis
+    node.set_best(block850);
+    wallet.sync(&node);
+
+    println!("Queries: {}", node.how_many_queries());
+    assert!(
+        node.how_many_queries() < (850 + 1000) /* we already called 1000 times at least to sync to block 1000 */
+    );
 }
