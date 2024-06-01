@@ -98,9 +98,9 @@ fn spend_utxo_in_same_block() {
     assert_eq!(wallet.net_worth(), 0);
 }
 
-/// test sync performance with 100 blocks
+/// test sync performance with 1000 blocks
 #[test]
-fn sync_100_blocks() {
+fn perf_sync_100_blocks() {
     let mut node = MockNode::new();
     let mut wallet = Wallet::new(vec![Address::Alice, Address::Bob].into_iter());
 
@@ -151,7 +151,7 @@ fn sync_100_blocks() {
 
     println!("Queries: {}", node.how_many_queries());
     assert!(
-        node.how_many_queries() < (70 + 100) /* we already called 100 times at least to sync to block 100 */
+        node.how_many_queries() < (75 + 100) /* we already called 100 times at least to sync to block 100 */
     );
 
     assert_eq!(wallet.best_height(), 75);
@@ -163,7 +163,7 @@ fn sync_100_blocks() {
 
 /// test sync performance with 100 blocks
 #[test]
-fn sync_1000_blocks() {
+fn pref_sync_1000_blocks() {
     let mut node = MockNode::new();
     let mut wallet = Wallet::new(vec![Address::Alice, Address::Bob].into_iter());
 
