@@ -195,18 +195,18 @@ fn sync_1000_blocks() {
             ],
         };
         last_block = node.add_block_as_best(last_block, vec![tx1, tx2]);
-        if i == 75 {
+        if i == 850 {
             block850 = last_block;
         }
     }
 
     wallet.sync(&node);
 
-    assert_eq!(wallet.best_height(), 100);
+    assert_eq!(wallet.best_height(), 1000);
     assert_eq!(wallet.best_hash(), last_block);
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(3000));
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(2000));
-    assert_eq!(wallet.net_worth(), 500);
+    assert_eq!(wallet.net_worth(), 5000);
 
     // reorg to genesis
     node.set_best(block850);
