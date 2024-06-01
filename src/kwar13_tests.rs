@@ -413,6 +413,26 @@ fn utxo_reog_simple() {
     assert_eq!(wallet.best_hash(), b4_id);
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(0));
     assert_eq!(wallet.total_assets_of(Address::Bob), Ok(13));
+
+    // call sync another time to make sure nothing double counted
+    wallet.sync(&node);
+    assert_eq!(wallet.best_height(), 4);
+    assert_eq!(wallet.best_hash(), b4_id);
+    assert_eq!(wallet.total_assets_of(Address::Alice), Ok(0));
+    assert_eq!(wallet.total_assets_of(Address::Bob), Ok(13));
+}
+
+#[test]
+fn call_sync_twice() {
+    let (node, mut wallet) = make_one_block_blockchain();
+
+    wallet.sync(&node);
+    assert_eq!(wallet.total_assets_of(Address::Alice), Ok(100 + 15));
+    assert_eq!(wallet.total_assets_of(Address::Bob), Ok(120));
+
+    wallet.sync(&node);
+    assert_eq!(wallet.total_assets_of(Address::Alice), Ok(100 + 15));
+    assert_eq!(wallet.total_assets_of(Address::Bob), Ok(120));
 }
 
 // add a test to send in a coin to an address, then reorg that tranaction away
