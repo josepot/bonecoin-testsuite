@@ -1,7 +1,7 @@
 //! Tests for the bonecoin wallet
 
-use std::collections::*;
 use bonecoin_core::*;
+use std::collections::*;
 use utxo_wallet_assignment::Wallet;
 
 /// Simple helper to initialize a wallet with just one account.
@@ -20,7 +20,7 @@ fn wallet_with_multiple_users() -> Wallet {
 /// Helper to create a simple and somewhat collision unlikely transaction to mark forks.
 /// When your tests create forked blockchain, you have have to be sure that you are not accidentally
 /// creating the same chain twice. It is sometimes useful, therefore, to put this little marker tx on the new side of the fork.
-/// 
+///
 /// You can see examples of using this function in the tests below.
 fn marker_tx() -> Transaction {
     Transaction {
@@ -256,11 +256,14 @@ fn tracks_multiple_utxos() {
     assert_eq!(wallet.net_worth(), COIN_VALUE * 3);
     assert_eq!(
         wallet.all_coins_of(Address::Alice),
-        Ok(HashSet::from_iter([(coin1_id, COIN_VALUE), (coin2_id, COIN_VALUE * 2)]))
+        Ok(HashSet::from_iter([
+            (coin1_id, COIN_VALUE),
+            (coin2_id, COIN_VALUE * 2)
+        ]))
     );
     assert_eq!(wallet.coin_details(&coin1_id), Ok(coin1));
     assert_eq!(wallet.coin_details(&coin2_id), Ok(coin2));
-}   
+}
 
 // Track UTXOs to multiple users
 #[test]
@@ -304,7 +307,7 @@ fn track_utxos_to_multiple_users() {
     );
     assert_eq!(wallet.coin_details(&coin1_id), Ok(coin1));
     assert_eq!(wallet.coin_details(&coin2_id), Ok(coin2));
-} 
+}
 
 // Create manual transaction
 // ... with missing input
@@ -325,7 +328,7 @@ fn check_manual_transaction_with_missing_input() {
         wallet.create_manual_transaction(vec![tx.coin_id(1, 0)], vec![coin]),
         Err(WalletError::UnknownCoin)
     );
-} 
+}
 
 // ... with double spending
 #[test]
@@ -346,14 +349,14 @@ fn check_manual_transaction_with_double_spending() {
     node.add_block_as_best(Block::genesis().id(), vec![tx.clone()]);
     wallet.sync(&node);
 
-        //create a vec to hold the coins that we will use as outputs
-        //so we dont use them twice
-        let mut used_input_coins:Vec<Coin> = Vec::new();
+    //create a vec to hold the coins that we will use as outputs
+    //so we dont use them twice
+    let mut used_input_coins: Vec<Coin> = Vec::new();
     assert_eq!(
         wallet.create_manual_transaction(vec![tx.coin_id(1, 0), tx.coin_id(1, 0)], vec![]),
         Err(WalletError::UnknownCoin)
     );
-} 
+}
 
 // ... with owner address to not be in the wallet
 #[test]
@@ -363,7 +366,7 @@ fn check_manual_transaction_with_wrong_input_addresses() {
         value: COIN_VALUE,
         owner: Address::Bob,
     };
-    
+
     let tx = Transaction {
         inputs: vec![Input::dummy()],
         outputs: vec![coin.clone()],
@@ -379,7 +382,7 @@ fn check_manual_transaction_with_wrong_input_addresses() {
         wallet.create_manual_transaction(vec![tx.coin_id(1, 0)], vec![]),
         Err(WalletError::UnknownCoin)
     );
-} 
+}
 // ... with too much output
 #[test]
 fn check_manual_transaction_with_too_much_output() {
@@ -415,7 +418,7 @@ fn check_manual_transaction_with_zero_output_value() {
     // Create a minimal chain to contain this transaction and sync it
     let mut node = MockNode::new();
     node.add_block_as_best(Block::genesis().id(), vec![tx]);
-    
+
     let coin_output = Coin {
         value: 0,
         owner: Address::Alice,
@@ -428,7 +431,6 @@ fn check_manual_transaction_with_zero_output_value() {
         wallet.create_manual_transaction(vec![coin_id], vec![coin_output]),
         Err(WalletError::ZeroCoinValue)
     );
-    
 }
 
 // Create automatic transactions
@@ -480,16 +482,15 @@ fn check_automatic_transaction_from_multiple_users() {
     let mut wallet = wallet_with_alice_and_bob();
     wallet.sync(&node);
 
-    match wallet.create_automatic_transaction(Address::Bob, COIN_VALUE*2, 0) {
+    match wallet.create_automatic_transaction(Address::Bob, COIN_VALUE * 2, 0) {
         Ok(transaction) => {
             assert_eq!(transaction.inputs.len(), 2);
             assert_eq!(transaction.outputs.len(), 1);
-            assert_eq!(transaction.outputs[0].value, COIN_VALUE*2);
+            assert_eq!(transaction.outputs[0].value, COIN_VALUE * 2);
         }
         Err(e) => {
             panic!("Error: {:?}", e);
         }
-        
     }
 }
 
@@ -523,7 +524,6 @@ fn check_automatic_transaction_with_zero_change() {
         Err(e) => {
             panic!("Error: {:?}", e);
         }
-        
     }
 }
 
@@ -556,7 +556,6 @@ fn reorg_performance() {
     // MODIFIED: change from best_height to best_height(), same for best_hash
     println!("Wallet best_height: {:?}", wallet.best_height());
     println!("Wallet best_hash: {:?}", wallet.best_hash());
-
 
     assert_eq!(wallet.best_height(), 9);
     assert_eq!(wallet.best_hash(), b8_bis_id);
@@ -632,7 +631,6 @@ fn dont_save_coins_not_owned_by_our_wallet_addresses() {
 
     assert!(wallet.total_assets_of(Address::Alice) == Ok(200));
     assert!(wallet.net_worth() == 200);
-
 }
 
 #[test]
@@ -800,7 +798,10 @@ fn reorg_hard_test_hehe() {
     assert_eq!(4, wallet.best_height());
     assert_eq!(block_4, wallet.best_hash());
     // this two are actually equal. Prior the reorg, we have spent it. Now, BOOM, 880 bucks up man
-    assert_eq!(alice_coin_created_and_destroyed_at_block_3, alice_coin_created_at_block_3);
+    assert_eq!(
+        alice_coin_created_and_destroyed_at_block_3,
+        alice_coin_created_at_block_3
+    );
 
     assert_eq!(
         Ok(HashSet::from([
@@ -821,7 +822,6 @@ fn reorg_hard_test_hehe() {
     assert_eq!(Ok(925), wallet.total_assets_of(Address::Alice));
     assert_eq!(Ok(120), wallet.total_assets_of(Address::Bob));
     assert_eq!(1045, wallet.net_worth());
-
 }
 
 // fn initial_setup() -> (impl WalletApi, MockNode) {
@@ -909,8 +909,14 @@ fn test_reorgs_with_utxos_in_chain_history() {
     let mut node = MockNode::new();
     let mut wallet = wallet_with_alice();
 
-    let coin_1 = Coin { value: 50, owner: Address::Alice };
-    let coin_2 = Coin { value: 100, owner: Address::Alice };
+    let coin_1 = Coin {
+        value: 50,
+        owner: Address::Alice,
+    };
+    let coin_2 = Coin {
+        value: 100,
+        owner: Address::Alice,
+    };
 
     let tx_1 = Transaction {
         inputs: vec![Input::dummy()],
@@ -936,7 +942,10 @@ fn test_reorgs_with_utxos_in_chain_history() {
     assert_eq!(wallet.net_worth(), 150);
 
     // New chain
-    let new_coin = Coin { value: 200, owner: Address::Alice };
+    let new_coin = Coin {
+        value: 200,
+        owner: Address::Alice,
+    };
     let tx_new = Transaction {
         inputs: vec![Input::dummy()],
         outputs: vec![new_coin.clone()],
@@ -950,5 +959,4 @@ fn test_reorgs_with_utxos_in_chain_history() {
     assert_eq!(wallet.best_hash(), new_b5_id);
     assert_eq!(wallet.total_assets_of(Address::Alice), Ok(250));
     assert_eq!(wallet.net_worth(), 250);
-} 
-
+}
